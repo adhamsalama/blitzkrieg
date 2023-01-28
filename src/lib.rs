@@ -1,17 +1,17 @@
 mod http;
+mod server;
+use http::Request;
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread,
-    time::Duration,
 };
-
 pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: mpsc::Sender<Job>,
 }
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
-
+type Job2 = Box<dyn Fn(&Request) + Send + 'static>;
 impl ThreadPool {
     /// Create a new ThreadPool.
     ///
@@ -55,9 +55,6 @@ impl Worker {
         let thread = thread::spawn(move || loop {
             let job = receiver.lock().unwrap().recv().unwrap();
             println!("Worker {id} got a job; executing.");
-            if id == 2 {
-                thread::sleep(Duration::from_secs(20));
-            }
             job();
         });
 
