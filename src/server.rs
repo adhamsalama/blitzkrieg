@@ -13,29 +13,30 @@ use crate::{
 pub struct Server {
     pub threadpool: ThreadPool,
     pub listener: TcpListener,
-    pub job: Option<Box<dyn FnOnce(&Request) + Send + 'static>>,
+    pub handler: Arc<Box<dyn Fn(&Request) + Send + Sync + 'static>>,
 }
 impl Server {
-    pub fn new(port: String, handler: Box<dyn FnOnce(&Request) + Send + Sync>) -> Server {
+    pub fn new(port: &str, handler: Box<dyn Fn(&Request) + Send + Sync>) -> Server {
         let listener = TcpListener::bind(port).unwrap();
         let pool = ThreadPool::new(4);
         Server {
-            // port: port.clone(),
             threadpool: pool,
             listener,
-            job: Some(handler),
+            handler: Arc::new(handler),
         }
     }
     pub fn start(&self) {
+        println!("Web Server is running...");
         for stream in self.listener.incoming() {
-            self.threadpool.execute(|| {
+            let handler = Arc::clone(&self.handler);
+            self.threadpool.execute(move || {
                 let (mut stream, request) = handle_connection(stream.unwrap());
-                // print_http_request(request);
+                handler(&request);
                 match request.body.unwrap() {
                     BodyType::FormdataBody(formdata) => {
-                        for file in formdata.files.unwrap_or_else(|| vec![]) {
-                            fs::write(file.name, file.content);
-                        }
+                        // for file in formdata.files.unwrap_or_else(|| vec![]) {
+                        //     fs::write(file.name, file.content);
+                        // }
                     }
                     other => print!("other"),
                 }
