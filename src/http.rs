@@ -3,10 +3,11 @@ use std::{
     hash::Hash,
     io::{BufRead, BufReader, Read},
     net::TcpStream,
+    str::FromStr,
     string::FromUtf8Error,
 };
 
-enum HTTPMethods {
+pub enum HTTPMethod {
     GET,
     POST,
     PUT,
@@ -14,6 +15,22 @@ enum HTTPMethods {
     DELETE,
     HEAD,
     OPTIONS,
+}
+impl FromStr for HTTPMethod {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<HTTPMethod, Self::Err> {
+        match input {
+            "GET" => Ok(HTTPMethod::GET),
+            "Baz" => Ok(HTTPMethod::POST),
+            "Bat" => Ok(HTTPMethod::PUT),
+            "Bat" => Ok(HTTPMethod::PATCH),
+            "Bat" => Ok(HTTPMethod::DELETE),
+            "Bat" => Ok(HTTPMethod::HEAD),
+            "Bat" => Ok(HTTPMethod::OPTIONS),
+            _ => Err(()),
+        }
+    }
 }
 pub struct FormdataText {
     pub name: String,
@@ -38,7 +55,7 @@ pub enum BodyType {
     FormdataBody(FormdataBody),
 }
 pub struct Request {
-    pub method: String,
+    pub method: HTTPMethod,
     pub path: String,
     pub headers: HashMap<String, String>,
     // queries: HashMap<String, String>,
@@ -111,7 +128,7 @@ pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
         return Request {
             path: uri.to_string(),
             body: Some(BodyType::FormdataBody(formdatabody)),
-            method: method.to_string(),
+            method: HTTPMethod::from_str(method).unwrap(),
             headers,
         };
     } else {
@@ -119,7 +136,7 @@ pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
         return Request {
             path: uri.to_string(),
             body: Some(BodyType::Text(chars)),
-            method: method.to_string(),
+            method: HTTPMethod::from_str(method).unwrap(),
             headers,
         };
     }

@@ -1,6 +1,5 @@
 mod http;
 mod server;
-use http::Request;
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread,
@@ -11,7 +10,6 @@ pub struct ThreadPool {
 }
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
-type Job2 = Box<dyn Fn(&Request) + Send + 'static>;
 impl ThreadPool {
     /// Create a new ThreadPool.
     ///

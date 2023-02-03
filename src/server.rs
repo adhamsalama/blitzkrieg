@@ -30,7 +30,7 @@ impl Server {
         for stream in self.listener.incoming() {
             let handler = Arc::clone(&self.handler);
             self.threadpool.execute(move || {
-                let (mut stream, request) = handle_connection(stream.unwrap());
+                let (mut stream, request) = build_http_request(stream.unwrap());
                 handler(&request);
                 match request.body.unwrap() {
                     BodyType::FormdataBody(formdata) => {
@@ -47,7 +47,7 @@ impl Server {
     }
 }
 
-pub fn handle_connection(mut stream: TcpStream) -> (TcpStream, Request) {
+pub fn build_http_request(mut stream: TcpStream) -> (TcpStream, Request) {
     let (request, body) = parse_tcp_stream(&mut stream);
     let request = parse_http_string((request, body));
     return (stream, request);
