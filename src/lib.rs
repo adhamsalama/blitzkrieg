@@ -1,5 +1,5 @@
-mod http;
-mod server;
+pub mod http;
+pub mod server;
 use std::{
     sync::{mpsc, Arc, Mutex},
     thread,
