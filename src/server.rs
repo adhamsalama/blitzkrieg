@@ -6,17 +6,21 @@ use std::{
 };
 
 use crate::{
-    http::parse_formdata, http::parse_http_string, http::parse_tcp_stream, http::BodyType,
-    http::Request, ThreadPool,
+    http::parse_http_string,
+    http::parse_tcp_stream,
+    http::BodyType,
+    http::Request,
+    http::{parse_formdata, Response},
+    ThreadPool,
 };
 
 pub struct Server {
     pub threadpool: ThreadPool,
     pub listener: TcpListener,
-    pub handler: Arc<Box<dyn Fn(&Request) + Send + Sync + 'static>>,
+    pub handler: Arc<Box<dyn Fn(Request) -> Response + Send + Sync + 'static>>,
 }
 impl Server {
-    pub fn new(port: &str, handler: Box<dyn Fn(&Request) + Send + Sync>) -> Server {
+    pub fn new(port: &str, handler: Box<dyn Fn(Request) -> Response + Send + Sync>) -> Server {
         let listener = TcpListener::bind(port).unwrap();
         let pool = ThreadPool::new(4);
         Server {
@@ -31,17 +35,13 @@ impl Server {
             let handler = Arc::clone(&self.handler);
             self.threadpool.execute(move || {
                 let (mut stream, request) = build_http_request(stream.unwrap());
-                handler(&request);
-                // match request.body.unwrap() {
-                //     BodyType::FormdataBody(formdata) => {
-                //         // for file in formdata.files.unwrap_or_else(|| vec![]) {
-                //         //     fs::write(file.name, file.content);
-                //         // }
-                //     }
-                //     other => print!("other"),
-                // }
-                let response = "HTTP/1.1 200 OK\r\n\r\n".to_owned();
-                stream.write_all(response.as_bytes()).unwrap();
+                let response = handler(request);
+                let line = format!(
+                    "HTTP/1.1 {}\r\n\r\n{}",
+                    response.status_code,
+                    response.body.unwrap_or_else(|| "".to_string())
+                );
+                stream.write_all(line.as_bytes()).unwrap();
             });
         }
     }
