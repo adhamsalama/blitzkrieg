@@ -22,12 +22,12 @@ impl FromStr for HTTPMethod {
     fn from_str(input: &str) -> Result<HTTPMethod, Self::Err> {
         match input {
             "GET" => Ok(HTTPMethod::GET),
-            "Baz" => Ok(HTTPMethod::POST),
-            "Bat" => Ok(HTTPMethod::PUT),
-            "Bat" => Ok(HTTPMethod::PATCH),
-            "Bat" => Ok(HTTPMethod::DELETE),
-            "Bat" => Ok(HTTPMethod::HEAD),
-            "Bat" => Ok(HTTPMethod::OPTIONS),
+            "POST" => Ok(HTTPMethod::POST),
+            "PUT" => Ok(HTTPMethod::PUT),
+            "PATCH" => Ok(HTTPMethod::PATCH),
+            "DELETE" => Ok(HTTPMethod::DELETE),
+            "HEAD" => Ok(HTTPMethod::HEAD),
+            "OPTIONS" => Ok(HTTPMethod::OPTIONS),
             _ => Err(()),
         }
     }
