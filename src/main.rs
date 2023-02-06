@@ -1,7 +1,7 @@
 use blitzkrieg::ThreadPool;
 mod http;
 mod server;
-use http::Request;
+use http::{Request, Response};
 use server::Server;
 
 fn main() {
@@ -9,6 +9,12 @@ fn main() {
     server.start();
 }
 
-fn user_fn(req: &Request) {
+fn user_fn(req: Request) -> Response {
     println!("My Handler!!!");
+    Response {
+        status_code: 404,
+        headers: None,
+        cookies: None,
+        body: Some("Some String...".to_string()),
+    }
 }

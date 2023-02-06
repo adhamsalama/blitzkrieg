@@ -63,11 +63,11 @@ pub struct Request {
     pub body: Option<BodyType>,
 }
 
-struct Response {
-    status_code: u8,
-    headers: HashMap<String, String>,
-    cookies: HashMap<String, String>,
-    body: String,
+pub struct Response {
+    pub status_code: u16,
+    pub headers: Option<HashMap<String, String>>,
+    pub cookies: Option<HashMap<String, String>>,
+    pub body: Option<String>,
 }
 
 pub fn parse_tcp_stream(stream: &mut TcpStream) -> (String, Vec<u8>) {
