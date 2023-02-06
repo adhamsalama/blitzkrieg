@@ -32,14 +32,14 @@ impl Server {
             self.threadpool.execute(move || {
                 let (mut stream, request) = build_http_request(stream.unwrap());
                 handler(&request);
-                match request.body.unwrap() {
-                    BodyType::FormdataBody(formdata) => {
-                        // for file in formdata.files.unwrap_or_else(|| vec![]) {
-                        //     fs::write(file.name, file.content);
-                        // }
-                    }
-                    other => print!("other"),
-                }
+                // match request.body.unwrap() {
+                //     BodyType::FormdataBody(formdata) => {
+                //         // for file in formdata.files.unwrap_or_else(|| vec![]) {
+                //         //     fs::write(file.name, file.content);
+                //         // }
+                //     }
+                //     other => print!("other"),
+                // }
                 let response = "HTTP/1.1 200 OK\r\n\r\n".to_owned();
                 stream.write_all(response.as_bytes()).unwrap();
             });
