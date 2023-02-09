@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use blitzkrieg::ThreadPool;
 mod http;
 mod server;
@@ -11,9 +13,12 @@ fn main() {
 
 fn user_fn(req: Request) -> Response {
     println!("My Handler!!!");
+    let mut headers: HashMap<String, String> = HashMap::new();
+    headers.insert("Authorization".into(), "asd".into());
+    headers.insert("other-header".into(), "dsa".into());
     Response {
-        status_code: 404,
-        headers: None,
+        status_code: 200,
+        headers: Some(headers),
         cookies: None,
         body: Some("Some String...".to_string()),
     }

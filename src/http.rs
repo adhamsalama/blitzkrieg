@@ -1,10 +1,8 @@
 use std::{
     collections::HashMap,
-    hash::Hash,
     io::{BufRead, BufReader, Read},
     net::TcpStream,
     str::FromStr,
-    string::FromUtf8Error,
 };
 
 pub enum HTTPMethod {
@@ -106,14 +104,13 @@ pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
     let mut headers: HashMap<String, String> = HashMap::new();
     for header in request_lines.iter().skip(1) {
         if header.len() > 0 {
-            let splitted_header: Vec<&str> = header.split(": ").collect();
+            let split_index = header.find(": ").expect("Header doesn't have a ': '");
             headers.insert(
-                splitted_header[0].to_string(),
-                splitted_header[1].to_string(),
+                header[..split_index].to_string(),
+                header[split_index + 2..].to_string(),
             );
         }
     }
-    let mut mybody: Formdata;
     if headers
         .get("Content-Type")
         .unwrap()
@@ -141,16 +138,16 @@ pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
         };
     }
 }
-struct FormdataField {
-    content_disposition: String,
-    name: String,
-    value: String,
-    filename: Option<String>,
-    content_type: Option<String>,
-}
+// struct FormdataField {
+//     content_disposition: String,
+//     name: String,
+//     value: String,
+//     filename: Option<String>,
+//     content_type: Option<String>,
+// }
 pub fn map_formdata_part(line: &str) -> Formdata {
     let binding = line.replace("\r\n\r\n", " ").replace("\r\n", "");
-    let mut cleaned_line: Vec<&str> = binding.split("; ").collect();
+    let cleaned_line: Vec<&str> = binding.split("; ").collect();
     assert!(cleaned_line[0] == "Content-Disposition: form-data");
     let mut field_type = "";
     fn get_field_name(field: &Vec<&str>) -> String {
