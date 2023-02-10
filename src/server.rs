@@ -51,6 +51,7 @@ pub fn build_http_response_string(response: Response) -> Vec<u8> {
     for (key, value) in response.headers.unwrap_or_default() {
         res = format!("{}{}: {}\r\n", res, key, value);
     }
+    res.push_str("Server: Blitzkrieg\r\n");
     res.push_str("\r\n");
     let mut res = res.as_bytes().to_owned();
     res.append(&mut response.body.unwrap_or_default());
