@@ -37,8 +37,8 @@ pub struct FormdataText {
 
 pub struct FormdataFile {
     pub name: String,
-    pub file_type: String,
-    pub content: String,
+    pub file_name: String,
+    pub content: Vec<u8>,
 }
 pub enum Formdata {
     FormdataText(FormdataText),
@@ -138,87 +138,73 @@ pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
         };
     }
 }
-// struct FormdataField {
-//     content_disposition: String,
-//     name: String,
-//     value: String,
-//     filename: Option<String>,
-//     content_type: Option<String>,
-// }
-pub fn map_formdata_part(line: &str) -> Formdata {
-    let binding = line.replace("\r\n\r\n", " ").replace("\r\n", "");
-    let cleaned_line: Vec<&str> = binding.split("; ").collect();
-    assert!(cleaned_line[0] == "Content-Disposition: form-data");
-    let mut field_type = "";
-    fn get_field_name(field: &Vec<&str>) -> String {
-        return field[0][5..].to_string();
-    }
-    fn get_field_data(cleaned_line: &Vec<&str>) -> (String, String) {
-        let cleaned_field = cleaned_line[1].replace("\"", "");
-        let splitted_field: Vec<&str> = cleaned_field.split_whitespace().collect();
-        let field_name = get_field_name(&splitted_field);
-        let value = splitted_field[1];
-        (field_name, value.to_string())
-    }
-    if cleaned_line.len() == 2 {
-        field_type = "text";
-        let (field_name, value) = get_field_data(&cleaned_line);
-        // println!("Text field name {field_name}");
-        // println!("Text field value {value}");
-        let fdt = FormdataText {
-            name: field_name,
-            value: value.to_string(),
-        };
-        return Formdata::FormdataText(fdt);
-    } else if cleaned_line.len() == 3 {
-        field_type = "file";
-        let field_name = cleaned_line[1][5..].to_string().replace("\"", "");
-        let mut value: Vec<&str> = cleaned_line[2].split("Content-Type: ").collect();
-        println!("Value 0 {:?}", value[0]);
-        // println!("Value 1 {:?}", value[1]);
-
-        let mut filetype = String::new();
-        for char in value[1].chars() {
-            if char != ' ' {
-                filetype.push(char);
-                value[1] = &value[1][1..];
-            } else {
-                value[1] = &value[1][1..];
-                break;
-            }
-        }
-        println!("File type {filetype}");
-        println!("File value {:?}", value[1]);
-        let fdf = FormdataFile {
-            name: field_name,
-            file_type: filetype,
-            content: value[1].to_string(),
-        };
-        return Formdata::FormdataFile(fdf);
-    } else {
-        panic!("Unknown formdata field type!");
-    }
-}
 pub fn parse_formdata(data: &Vec<u8>) -> FormdataBody {
     // Get separator value
-    let data = String::from_utf8_lossy(&data);
-    let data_splitted: Vec<&str> = data.split("\r\n").collect();
-    let separator = data_splitted[0];
-    let mut useful_data: Vec<&str> = data.split(separator).collect();
-    useful_data.remove(0);
-    useful_data.remove(useful_data.len() - 1);
-    // let num_of_fields = useful_data.len() / 2;
-    let mut formdatafields: Vec<FormdataText> = vec![];
-    let mut formdatafiles: Vec<FormdataFile> = vec![];
-    for line in useful_data {
-        let output = map_formdata_part(line);
-        match output {
-            Formdata::FormdataText(text) => formdatafields.push(text),
-            Formdata::FormdataFile(file) => formdatafiles.push(file),
+    let n = data.len();
+    let mut i = 0;
+    let mut form_files: Vec<FormdataFile> = vec![];
+    let mut form_fields: Vec<FormdataText> = vec![];
+    while i < n - 1 {
+        let mut line = String::new();
+        while !(data[i] == 13 && data[i + 1] == 10) {
+            line.push(data[i] as char);
+            i += 1;
         }
+        i += 4;
+        if line == "" || line.starts_with("-") {
+            i += 1;
+            continue;
+        }
+        if line.contains("form-data") && line.contains("filename") {
+            let splitted = line.replace("\"", "");
+            let splitted: Vec<&str> = splitted.split("; ").collect();
+            let name = &splitted[1][5..];
+
+            let filename = &splitted[2][9..];
+            // Start parsing file
+            // Ignore \r\n
+            i += 4;
+            // Ignore content-type
+            while !(data[i] == 13 && data[i + 1] == 10) {
+                i += 1;
+            }
+            // Ignore \r\n
+            i += 4;
+            let mut file: Vec<u8> = vec![];
+            while !(data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 45 && data[i + 3] == 45) {
+                file.push(data[i]);
+                i += 1;
+            }
+
+            form_files.push(FormdataFile {
+                name: name.into(),
+                file_name: filename.into(),
+                content: file,
+            })
+        } else if line.contains("form-data") {
+            let mut value = String::new();
+            // i += 4;
+            while !(data[i] == 13 && data[i + 1] == 10) {
+                value.push(data[i] as char);
+                i += 1;
+            }
+            let splitted = line.replace("\"", "");
+            let splitted: Vec<&str> = splitted.split("; ").collect();
+            let name = &splitted[1][5..];
+            form_fields.push(FormdataText {
+                name: name.into(),
+                value: value.into(),
+            })
+        } else {
+            // Shouldn't reach here if line doesn't start with "--"
+            if !line.contains("--") {
+                panic!("Error in parsing form data");
+            }
+        }
+        i += 1;
     }
     FormdataBody {
-        fields: Some(formdatafields),
-        files: Some(formdatafiles),
+        fields: Some(form_fields),
+        files: Some(form_files),
     }
 }

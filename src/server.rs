@@ -74,9 +74,9 @@ pub fn print_http_request(request: Request) {
             for field in formdatafields.unwrap_or_else(|| vec![]) {
                 println!("Field name {}, value {}", field.name, field.value);
             }
-            for field in formdatafiles.unwrap_or_else(|| vec![]) {
-                println!("File name {}, content {}", field.name, field.content);
-            }
+            // for field in formdatafiles.unwrap_or_else(|| vec![]) {
+            //     println!("File name {}, content {}", field.name, field.content);
+            // }
         }
         BodyType::Text(text) => println!("Raw text {:?}", text), // BodyType::Text(text) => println!("Body is text {text}"),
     }
