@@ -56,15 +56,12 @@ pub struct Request {
     pub method: HTTPMethod,
     pub path: String,
     pub headers: HashMap<String, String>,
-    // queries: HashMap<String, String>,
-    // cookies: HashMap<String, String>,
     pub body: Option<BodyType>,
 }
 
 pub struct Response {
     pub status_code: u16,
     pub headers: Option<HashMap<String, String>>,
-    pub cookies: Option<HashMap<String, String>>,
     pub body: Option<Vec<u8>>,
 }
 
