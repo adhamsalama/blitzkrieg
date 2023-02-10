@@ -1,16 +1,11 @@
+use crate::{
+    http::parse_http_string, http::parse_tcp_stream, http::BodyType, http::Request, http::Response,
+    threadpool::ThreadPool,
+};
 use std::{
     io::prelude::*,
     net::{TcpListener, TcpStream},
     sync::Arc,
-};
-
-use crate::{
-    http::parse_http_string,
-    http::parse_tcp_stream,
-    http::BodyType,
-    http::Request,
-    http::{parse_formdata, Response},
-    ThreadPool,
 };
 
 pub struct Server {
