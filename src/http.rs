@@ -113,7 +113,7 @@ pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
     }
     if headers
         .get("Content-Type")
-        .unwrap()
+        .unwrap_or(&"".to_string())
         .contains("multipart/form-data")
     {
         headers.insert(
