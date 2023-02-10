@@ -161,7 +161,6 @@ pub fn parse_formdata(data: &Vec<u8>) -> FormdataBody {
             let name = &splitted[1][5..];
 
             let filename = &splitted[2][9..];
-            // println!("FILE {name} {filename}");
             // Start parsing file
             // Ignore \r\n
             i += 4;
@@ -197,7 +196,10 @@ pub fn parse_formdata(data: &Vec<u8>) -> FormdataBody {
                 value: value.into(),
             })
         } else {
-            // println!("VALUE {line}");
+            // Shouldn't reach here if line doesn't start with "--"
+            if !line.contains("--") {
+                panic!("Error in parsing form data");
+            }
         }
         i += 1;
     }
