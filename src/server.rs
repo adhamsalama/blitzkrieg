@@ -1,5 +1,5 @@
 use crate::{
-    http::parse_http_string, http::parse_tcp_stream, http::BodyType, http::Request, http::Response,
+    http::parse_http_string, http::parse_tcp_stream, http::Request, http::Response,
     threadpool::ThreadPool,
 };
 use std::{
@@ -30,8 +30,8 @@ impl Server {
             self.threadpool.execute(move || {
                 let (mut stream, request) = build_http_request(stream.unwrap());
                 let response = handler(request);
-                let response_string = build_http_response_string(response);
-                stream.write_all(response_string.as_bytes()).unwrap();
+                let response_bytes = build_http_response_string(response);
+                stream.write_all(&response_bytes).unwrap();
             });
         }
     }
@@ -43,7 +43,7 @@ pub fn build_http_request(mut stream: TcpStream) -> (TcpStream, Request) {
     return (stream, request);
 }
 
-pub fn build_http_response_string(response: Response) -> String {
+pub fn build_http_response_string(response: Response) -> Vec<u8> {
     let mut res = String::from("HTTP/1.1 ");
     let status_code = response.status_code.to_string();
     res = format!("{}{}", res, status_code);
@@ -52,27 +52,7 @@ pub fn build_http_response_string(response: Response) -> String {
         res = format!("{}{}: {}\r\n", res, key, value);
     }
     res.push_str("\r\n");
-    res.push_str(&response.body.unwrap_or_default());
+    let mut res = res.as_bytes().to_owned();
+    res.append(&mut response.body.unwrap_or_default());
     res
-}
-pub fn print_http_request(request: Request) {
-    println!("Request path {}", request.path);
-    println!("Request headers {:?}", request.headers);
-    println!(
-        "Request content type {:?}",
-        request.headers.get("Content-Type").unwrap()
-    );
-    match request.body.unwrap() {
-        BodyType::FormdataBody(body) => {
-            let formdatafields = body.fields;
-            let formdatafiles = body.files;
-            for field in formdatafields.unwrap_or_else(|| vec![]) {
-                println!("Field name {}, value {}", field.name, field.value);
-            }
-            // for field in formdatafiles.unwrap_or_else(|| vec![]) {
-            //     println!("File name {}, content {}", field.name, field.content);
-            // }
-        }
-        BodyType::Text(text) => println!("Raw text {:?}", text), // BodyType::Text(text) => println!("Body is text {text}"),
-    }
 }
