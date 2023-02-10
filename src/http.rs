@@ -172,11 +172,11 @@ pub fn parse_formdata(data: &Vec<u8>) -> FormdataBody {
             // Ignore \r\n
             i += 4;
             let mut file: Vec<u8> = vec![];
-            while !(data[i] == 13 && data[i + 1] == 10) {
+            while !(data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 45 && data[i + 3] == 45) {
                 file.push(data[i]);
                 i += 1;
             }
-            println!("FILE {} ender {} {}", filename, data[i], data[i + 1]);
+
             form_files.push(FormdataFile {
                 name: name.into(),
                 file_name: filename.into(),
