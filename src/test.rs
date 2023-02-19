@@ -34,8 +34,6 @@ pub mod tests {
         match req.body.unwrap() {
             http::BodyType::Text(_) => panic!("Bodytype shouldn't be text/plain"),
             http::BodyType::FormdataBody(body) => {
-                // let mut expected_body: HashMap<String, String> = HashMap::new();
-                // expected_body.insert("name".into(), "adhom".into());
                 let mut expected_body: Vec<FormdataText> = Vec::new();
                 expected_body.push(FormdataText {
                     name: "name".into(),
