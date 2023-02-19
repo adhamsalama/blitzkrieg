@@ -10,3 +10,5 @@ pub mod http;
 pub mod server;
 /// A module for implementing a threadpool for the server.
 pub mod threadpool;
+
+mod test;
