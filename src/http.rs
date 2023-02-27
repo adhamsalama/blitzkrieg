@@ -5,6 +5,7 @@ use std::{
     str::FromStr,
 };
 
+#[derive(Debug, PartialEq)]
 pub enum HTTPMethod {
     GET,
     POST,
@@ -30,11 +31,14 @@ impl FromStr for HTTPMethod {
         }
     }
 }
+
+#[derive(Debug, PartialEq)]
 pub struct FormdataText {
     pub name: String,
     pub value: String,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct FormdataFile {
     pub name: String,
     pub file_name: String,
@@ -44,14 +48,19 @@ pub enum Formdata {
     FormdataText(FormdataText),
     FormdataFile(FormdataFile),
 }
+
+#[derive(Debug, PartialEq)]
 pub struct FormdataBody {
     pub fields: Option<Vec<FormdataText>>,
     pub files: Option<Vec<FormdataFile>>,
 }
+
+#[derive(Debug)]
 pub enum BodyType {
     Text(String),
     FormdataBody(FormdataBody),
 }
+#[derive(Debug)]
 pub struct Request {
     pub method: HTTPMethod,
     pub path: String,
