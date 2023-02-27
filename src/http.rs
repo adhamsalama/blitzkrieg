@@ -74,6 +74,27 @@ pub struct Response {
     pub body: Option<Vec<u8>>,
 }
 
+impl Response {
+    pub fn new(status_code: u16) -> Self {
+        Self {
+            status_code,
+            headers: None,
+            body: None,
+        }
+    }
+
+    /// Set  reponse headers
+    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+        self.headers = Some(headers);
+        self
+    }
+    /// Set  reponse body
+    pub fn body(mut self, body: &str) -> Self {
+        self.body = Some(body.as_bytes().to_vec());
+        self
+    }
+}
+
 pub fn parse_tcp_stream(stream: &mut TcpStream) -> (String, Vec<u8>) {
     let mut reader = BufReader::new(stream);
 

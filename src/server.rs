@@ -24,7 +24,10 @@ impl Server {
         }
     }
     pub fn start(&self) {
-        println!("Web Server is running...");
+        println!(
+            "Blitzkrieg Web Server is running on {}",
+            self.listener.local_addr().unwrap()
+        );
         for stream in self.listener.incoming() {
             let handler = Arc::clone(&self.handler);
             self.threadpool.execute(move || {
