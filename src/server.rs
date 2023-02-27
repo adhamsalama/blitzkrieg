@@ -1,8 +1,10 @@
-use crate::{http::parse_tcp_stream, http::Request, http::Response, threadpool::ThreadPool};
+use crate::{
+    http::parse_http_string, http::parse_tcp_stream, http::Request, http::Response,
+    threadpool::ThreadPool,
+};
 use std::{
     io::prelude::*,
     net::{TcpListener, TcpStream},
-    str::FromStr,
     sync::Arc,
 };
 
@@ -40,7 +42,7 @@ impl Server {
 
 pub fn build_http_request(mut stream: TcpStream) -> (TcpStream, Request) {
     let (request, body) = parse_tcp_stream(&mut stream);
-    let request = Request::from_str(&request).unwrap().body(body).clone();
+    let request = parse_http_string((request, body));
     return (stream, request);
 }
 

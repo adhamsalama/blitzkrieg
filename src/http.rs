@@ -5,119 +5,58 @@ use std::{
     str::FromStr,
 };
 
-mod errors;
-mod methods;
-
-use errors::*;
-use methods::*;
-
-#[derive(Clone)]
-pub struct FormdataFile {
-    pub name: String,
-    pub file_name: String,
-    pub content: Vec<u8>,
+pub enum HTTPMethod {
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    HEAD,
+    OPTIONS,
 }
-#[derive(Clone)]
+impl FromStr for HTTPMethod {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<HTTPMethod, Self::Err> {
+        match input {
+            "GET" => Ok(HTTPMethod::GET),
+            "POST" => Ok(HTTPMethod::POST),
+            "PUT" => Ok(HTTPMethod::PUT),
+            "PATCH" => Ok(HTTPMethod::PATCH),
+            "DELETE" => Ok(HTTPMethod::DELETE),
+            "HEAD" => Ok(HTTPMethod::HEAD),
+            "OPTIONS" => Ok(HTTPMethod::OPTIONS),
+            _ => Err(()),
+        }
+    }
+}
 pub struct FormdataText {
     pub name: String,
     pub value: String,
 }
 
+pub struct FormdataFile {
+    pub name: String,
+    pub file_name: String,
+    pub content: Vec<u8>,
+}
 pub enum Formdata {
     FormdataText(FormdataText),
     FormdataFile(FormdataFile),
 }
-
-#[derive(Clone)]
 pub struct FormdataBody {
     pub fields: Option<Vec<FormdataText>>,
     pub files: Option<Vec<FormdataFile>>,
 }
-
-#[derive(Clone)]
 pub enum BodyType {
     Text(String),
     FormdataBody(FormdataBody),
 }
-
-#[derive(Clone)]
 pub struct Request {
     pub method: HTTPMethod,
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Option<BodyType>,
-}
-
-impl Request {
-    pub fn new(method: HTTPMethod, path: &str, headers: HashMap<String, String>) -> Self {
-        Self {
-            method,
-            path: path.to_string(),
-            headers,
-            body: None,
-        }
-    }
-
-    /// Set body request
-    pub fn body(&mut self, body: Vec<u8>) -> &Self {
-        self.body = Some(
-            match self
-                .headers
-                .get("Content-Type")
-                .unwrap_or(&"".to_string())
-                .contains("multipart/form-data")
-            {
-                true => {
-                    self.headers.insert(
-                        "Content-Type".to_string(),
-                        "multipart/form-data".to_string(),
-                    );
-                    let formdatabody = parse_formdata(&body);
-
-                    BodyType::FormdataBody(formdatabody)
-                }
-
-                false => {
-                    let chars = std::str::from_utf8(body.as_slice()).unwrap().to_string();
-                    BodyType::Text(chars)
-                }
-            },
-        );
-
-        self
-    }
-}
-
-impl FromStr for Request {
-    type Err = RequestError;
-
-    /// Parsing http request
-    fn from_str(request: &str) -> Result<Self, Self::Err> {
-        let request_lines: Vec<&str> = request.split("\r\n").collect();
-        let mut first_line_iter = request_lines[0].split_whitespace();
-        let method = first_line_iter.next().unwrap();
-        let uri = first_line_iter.next().unwrap();
-        let mut headers: HashMap<String, String> = HashMap::new();
-        for header in request_lines.iter().skip(1) {
-            if header.len() > 0 {
-                match header.find(": ") {
-                    Some(split_index) => {
-                        headers.insert(
-                            header[..split_index].to_string(),
-                            header[split_index + 2..].to_string(),
-                        );
-                    }
-                    None => return Err(RequestError::MissingChar(':')),
-                }
-            }
-        }
-        Ok(Self {
-            path: uri.to_string(),
-            body: None,
-            method: HTTPMethod::from_str(method).unwrap(),
-            headers,
-        })
-    }
 }
 
 pub struct Response {
@@ -175,6 +114,48 @@ pub fn parse_tcp_stream(stream: &mut TcpStream) -> (String, Vec<u8>) {
     return (request, buffer);
 }
 
+pub fn parse_http_string((request, body): (String, Vec<u8>)) -> Request {
+    let request_lines: Vec<&str> = request.split("\r\n").collect();
+    let mut first_line_iter = request_lines[0].split_whitespace();
+    let method = first_line_iter.next().unwrap();
+    let uri = first_line_iter.next().unwrap();
+    let mut headers: HashMap<String, String> = HashMap::new();
+    for header in request_lines.iter().skip(1) {
+        if header.len() > 0 {
+            let split_index = header.find(": ").expect("Header doesn't have a ': '");
+            headers.insert(
+                header[..split_index].to_string(),
+                header[split_index + 2..].to_string(),
+            );
+        }
+    }
+    if headers
+        .get("Content-Type")
+        .unwrap_or(&"".to_string())
+        .contains("multipart/form-data")
+    {
+        headers.insert(
+            "Content-Type".to_string(),
+            "multipart/form-data".to_string(),
+        );
+        let formdatabody = parse_formdata(&body);
+
+        return Request {
+            path: uri.to_string(),
+            body: Some(BodyType::FormdataBody(formdatabody)),
+            method: HTTPMethod::from_str(method).unwrap(),
+            headers,
+        };
+    } else {
+        let chars = std::str::from_utf8(body.as_slice()).unwrap().to_string();
+        return Request {
+            path: uri.to_string(),
+            body: Some(BodyType::Text(chars)),
+            method: HTTPMethod::from_str(method).unwrap(),
+            headers,
+        };
+    }
+}
 pub fn parse_formdata(data: &Vec<u8>) -> FormdataBody {
     // Get separator value
     let n = data.len();
