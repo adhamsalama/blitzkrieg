@@ -13,9 +13,13 @@ pub struct Server {
 
 impl Server {
     /// Creates a new HTTP Server.
-    pub fn new(port: &str, handler: Box<dyn Fn(Request) -> Response + Send + Sync>) -> Server {
+    pub fn new(
+        port: &str,
+        threads: usize,
+        handler: Box<dyn Fn(Request) -> Response + Send + Sync>,
+    ) -> Server {
         let listener = TcpListener::bind(port).unwrap();
-        let pool = ThreadPool::new(4);
+        let pool = ThreadPool::new(threads);
         Server {
             threadpool: pool,
             listener,

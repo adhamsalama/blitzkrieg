@@ -1,9 +1,12 @@
 [package]
 name = "blitzkrieg"
 description = "An HTTP Web Server."
-version = "0.1.9"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
+homepage = "https://github.com/adhamsalama/blitzkrieg"
+repository = "https://github.com/adhamsalama/blitzkrieg"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
