@@ -30,38 +30,36 @@ fn handler(request: Request) -> Response {
 }
 ```
 
-### [Multipart/form-data](examples/multi_part.rs)
+### [File](examples/file.rs)
 
 ```rust
-use blitzkrieg::http::{BodyType, Request, Response};
-use blitzkrieg::server::Server;
 use std::collections::HashMap;
-use std::fs;
+
+use blitzkrieg::{
+    http::{BodyType, Request, Response},
+    server::Server,
+};
+
 fn main() {
-    let server = Server::new("127.0.0.1:7818", 4, Box::new(handler));
+    let server = Server::new("127.0.0.1:4242", 4, Box::new(handler));
     server.start();
 }
 
-fn handler(request: Request) -> Response {
-    let mut headers: HashMap<String, String> = HashMap::new();
-    headers.insert("Authorization".into(), "Some token".to_string());
-    match request.body.unwrap() {
-        BodyType::FormdataBody(formdata_body) => {
-            println!("Request content-type is multipart/form-data");
-            for field in formdata_body.fields.unwrap_or_default() {
-                println!("Name {}, value {}", field.name, field.value);
-            }
-            for file in formdata_body.files.unwrap_or_default() {
-                println!("Name {}, filename {}", file.name, file.file_name);
-                // Save file to disk
-                fs::write(file.file_name, file.content);
-            }
-        }
-        BodyType::Text(text_body) => {
-            println!("Request content-type is text");
-            println!("{text_body}");
-        }
-    }
-    Response::new(200).body("Hello, world!")
+fn handler(req: Request) -> Response {
+    let mut res = Response::new(200);
+    let file = if let Some(BodyType::File(file)) = req.body {
+        file
+    } else {
+        return res.body("Hello, world!");
+    };
+    std::fs::write(format!("file.{}", file.extension), &file.content.clone()).unwrap();
+    res.body = Some(file.content);
+    let mut headers = HashMap::new();
+    headers.insert(
+        "Content-Type".into(),
+        req.headers.get("Content-Type").unwrap().into(),
+    );
+    res.headers = Some(headers);
+    res
 }
 ```
