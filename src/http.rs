@@ -119,11 +119,9 @@ impl Request {
                 );
             }
         }
-        if headers
-            .get("Content-Type")
-            .unwrap_or(&"".to_string())
-            .contains("multipart/form-data")
-        {
+        let default = "".to_string();
+        let content_type = headers.get("Content-Type").unwrap_or(&default);
+        if content_type.contains("multipart/form-data") {
             headers.insert(
                 "Content-Type".to_string(),
                 "multipart/form-data".to_string(),
