@@ -1,4 +1,4 @@
-use super::{BodyType, FormdataBody, FormdataFile, FormdataText, HTTPMethod, Request};
+use super::{BodyType, File, FormdataBody, FormdataFile, FormdataText, HTTPMethod, Request};
 use std::{
     collections::HashMap,
     io::{BufRead, BufReader, Read, Write},
@@ -7,11 +7,11 @@ use std::{
 
 impl Request {
     /// Constructs an HTTP Request from a TCP Stream.
-    pub fn from_tcp_stream<T: Read + Write>(stream: &mut T) -> Request {
+    pub fn from_tcp_stream<T: Read + Write>(stream: &mut T) -> Result<Request, String> {
         let mut reader = BufReader::new(stream);
         let mut request = String::new();
         loop {
-            let r = reader.read_line(&mut request).unwrap();
+            let r = reader.read_line(&mut request).map_err(|e| e.to_string())?;
             if r < 3 {
                 //detect empty line
                 break;
@@ -25,23 +25,25 @@ impl Request {
                     .split(":")
                     .skip(1)
                     .next()
-                    .unwrap()
+                    .unwrap_or_default()
                     .trim()
                     .parse::<usize>()
-                    .unwrap();
+                    .map_err(|_| "Invalid Content-Length value")?;
             }
         }
         let mut buffer = vec![0; size]; //New Vector with size of Content
-        reader.read_exact(&mut buffer).unwrap(); //Get the Body Content.
+        reader.read_exact(&mut buffer).map_err(|e| e.to_string())?; //Get the Body Content.
         let request = Request::parse(request, buffer);
         request
     }
     /// Parses an HTTP Request from a String and its body from a vector of bytes.
-    pub fn parse(request: String, body: Vec<u8>) -> Request {
+    pub fn parse(request: String, body: Vec<u8>) -> Result<Request, String> {
         let request_lines: Vec<&str> = request.split("\r\n").collect();
         let mut first_line_iter = request_lines[0].split_whitespace();
-        let method = first_line_iter.next().unwrap();
-        let uri = first_line_iter.next().unwrap();
+        let method = first_line_iter
+            .next()
+            .ok_or("Error while parsing HTTP method")?;
+        let uri = first_line_iter.next().ok_or("Error while parsing URI")?;
         let mut headers: HashMap<String, String> = HashMap::new();
         for header in request_lines.iter().skip(1) {
             if header.len() > 0 {
@@ -55,34 +57,67 @@ impl Request {
         let default = "".to_string();
         let content_type = headers.get("Content-Type").unwrap_or(&default);
         if content_type.contains("multipart/form-data") {
+            // This is because the line will have extra chars like " multipart/form-data; boundary=X-INSOMNIA-BOUNDARY"
             headers.insert(
                 "Content-Type".to_string(),
                 "multipart/form-data".to_string(),
             );
-            let formdatabody = Request::parse_formdata(&body);
-
-            return Request {
+            let formdatabody = Request::parse_formdata(&body)?;
+            return Ok(Request {
                 path: uri.to_string(),
                 body: Some(BodyType::FormdataBody(formdatabody)),
-                method: HTTPMethod::from_str(method).unwrap(),
+                method: HTTPMethod::from_str(method)?,
                 headers,
-            };
-        } else {
-            let body = std::str::from_utf8(body.as_slice()).unwrap().to_string();
+            });
+        } else if content_type.contains("application/json") || content_type.contains("text/xml") {
+            let body = std::str::from_utf8(body.as_slice()).map_err(|e| e.to_string())?;
             let body = match body.len() {
                 0 => None,
-                _ => Some(BodyType::Text(body)),
+                _ => Some(BodyType::Text(body.to_string())),
             };
-            return Request {
+            return Ok(Request {
                 path: uri.to_string(),
                 body,
-                method: HTTPMethod::from_str(method).unwrap(),
+                method: HTTPMethod::from_str(method)?,
                 headers,
+            });
+        }
+        // files
+        else if content_type.contains("application/")
+            || content_type.contains("image/")
+            || content_type.contains("audio/")
+            || content_type.contains("video/")
+        {
+            let extension = content_type
+                .split("/")
+                .last()
+                .ok_or("Content type for application wasn't specified")?;
+            return Ok(Request {
+                path: uri.to_string(),
+                body: Some(BodyType::File(File {
+                    extension: extension.to_string(),
+                    content: body,
+                })),
+                method: HTTPMethod::from_str(method)?,
+                headers,
+            });
+        } else {
+            let body = std::str::from_utf8(body.as_slice()).map_err(|e| e.to_string())?;
+            let body = match body.len() {
+                0 => None,
+                _ => Some(BodyType::Text(body.to_string())),
             };
+            return Ok(Request {
+                path: uri.to_string(),
+                body,
+                method: HTTPMethod::from_str(method)?,
+                headers,
+            });
         }
     }
+
     /// Parses and returns a Formdata body.
-    pub fn parse_formdata(data: &Vec<u8>) -> FormdataBody {
+    pub fn parse_formdata(data: &Vec<u8>) -> Result<FormdataBody, String> {
         // Get separator value
         let n = data.len();
         let mut i = 0;
@@ -146,7 +181,7 @@ impl Request {
             } else {
                 // Shouldn't reach here if line doesn't start with "--"
                 if !line.contains("--") {
-                    panic!("Error in parsing form data");
+                    return Err("Error while parsing form data".into());
                 }
             }
             i += 1;
@@ -159,9 +194,9 @@ impl Request {
             0 => None,
             _ => Some(form_files),
         };
-        FormdataBody {
+        Ok(FormdataBody {
             fields: form_fields,
             files: form_files,
-        }
+        })
     }
 }
