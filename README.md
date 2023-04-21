@@ -21,7 +21,7 @@ use blitzkrieg::http::{Request, Response};
 use blitzkrieg::server::Server;
 
 fn main() {
-    let server = Server::new("127.0.0.1:3000", Box::new(handler));
+    let server = Server::new("127.0.0.1:3000", 4, Box::new(handler));
     server.start();
 }
 
@@ -38,7 +38,7 @@ use blitzkrieg::server::Server;
 use std::collections::HashMap;
 use std::fs;
 fn main() {
-    let server = Server::new("127.0.0.1:7818", Box::new(handler));
+    let server = Server::new("127.0.0.1:7818", 4, Box::new(handler));
     server.start();
 }
 
