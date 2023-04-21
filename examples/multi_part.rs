@@ -24,6 +24,10 @@ fn handler(req: Request) -> Response {
             println!("Request content-type is text");
             println!("{text_body}");
         }
+        BodyType::File(file_body) => {
+            println!("Request content-type is file");
+            fs::write("file", file_body.content).unwrap();
+        }
     }
     Response::new(200).body("Hello, world!")
 }
