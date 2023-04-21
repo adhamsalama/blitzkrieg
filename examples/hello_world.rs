@@ -6,6 +6,6 @@ fn main() {
     server.start();
 }
 
-fn handler(request: Request) -> Response {
+fn handler(_req: Request) -> Response {
     Response::new(200).body("Hello, world!")
 }
