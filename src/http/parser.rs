@@ -186,17 +186,14 @@ impl Request {
             }
             i += 1;
         }
-        let form_fields = match form_fields.len() {
+        let fields = match form_fields.len() {
             0 => None,
             _ => Some(form_fields),
         };
-        let form_files = match form_files.len() {
+        let files = match form_files.len() {
             0 => None,
             _ => Some(form_files),
         };
-        Ok(FormdataBody {
-            fields: form_fields,
-            files: form_files,
-        })
+        Ok(FormdataBody { fields, files })
     }
 }
