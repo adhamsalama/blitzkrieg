@@ -1,5 +1,49 @@
 #[cfg(test)]
 pub mod tests {
+    use std::io::{Read, Write};
+
+    // Define a mock object that implements MyTcpStream
+    struct MockTcpStream {
+        read_buffer: Vec<u8>,
+        write_buffer: Vec<u8>,
+    }
+
+    impl MockTcpStream {
+        fn new() -> Self {
+            Self {
+                read_buffer: Vec::new(),
+                write_buffer: Vec::new(),
+            }
+        }
+
+        fn set_read_buffer(&mut self, buffer: Vec<u8>) {
+            self.read_buffer = buffer;
+        }
+
+        // fn get_write_buffer(&self) -> &[u8] {
+        //     &self.write_buffer
+        // }
+    }
+
+    impl Read for MockTcpStream {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            let bytes_read = std::cmp::min(buf.len(), self.read_buffer.len());
+            buf[..bytes_read].copy_from_slice(&self.read_buffer[..bytes_read]);
+            self.read_buffer.drain(..bytes_read);
+            Ok(bytes_read)
+        }
+    }
+
+    impl Write for MockTcpStream {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.write_buffer.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
 
     use crate::http::{self, FormdataText, HTTPMethod, Request};
     // Test parsing HTTP Requests from strings
@@ -20,6 +64,22 @@ pub mod tests {
         match req.body.unwrap() {
             http::BodyType::Text(body) => assert_eq!(body, "some plain body"),
             http::BodyType::FormdataBody(_) => panic!("Bodytype shouldn't be formdata"),
+        }
+    }
+    #[test]
+    fn parse_tcp_stream_works() {
+        let mut s = MockTcpStream::new();
+        let body_string = "some plain body";
+        let body: Vec<u8> = Vec::from(body_string);
+        let r = "POST / HTTP/1.1\r\nHost: localhost:7878\r\nUser-Agent: insomnia/2022.7.3\r\nContent-Type: text/plain\r\nAuthorization: token\r\nAccept: */*\r\nContent-Length: 15\r\n\r\n";
+        let v = [r.into(), body].concat();
+        s.set_read_buffer(v.into());
+        let req = Request::from_tcp_stream(&mut s);
+        match req.body {
+            Some(http::BodyType::Text(body)) => {
+                assert_eq!(body, body_string)
+            }
+            _ => panic!("Bodytype shouldn't be formdata"),
         }
     }
     #[test]
