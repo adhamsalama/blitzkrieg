@@ -137,10 +137,14 @@ impl Request {
                 headers,
             };
         } else {
-            let chars = std::str::from_utf8(body.as_slice()).unwrap().to_string();
+            let body = std::str::from_utf8(body.as_slice()).unwrap().to_string();
+            let body = match body.len() {
+                0 => None,
+                _ => Some(BodyType::Text(body)),
+            };
             return Request {
                 path: uri.to_string(),
-                body: Some(BodyType::Text(chars)),
+                body,
                 method: HTTPMethod::from_str(method).unwrap(),
                 headers,
             };
