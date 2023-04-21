@@ -1,15 +1,13 @@
 use blitzkrieg::http::{BodyType, Request, Response};
 use blitzkrieg::server::Server;
-use std::collections::HashMap;
 use std::fs;
+
 fn main() {
     let server = Server::new("127.0.0.1:3000", 4, Box::new(handler));
     server.start();
 }
 
 fn handler(req: Request) -> Response {
-    let mut headers: HashMap<String, String> = HashMap::new();
-    headers.insert("Authorization".into(), "Some token".to_string());
     match req.body.unwrap() {
         BodyType::FormdataBody(formdata_body) => {
             println!("Request content-type is multipart/form-data");
