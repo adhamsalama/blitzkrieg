@@ -104,7 +104,7 @@ pub mod tests {
                     value: "23".into(),
                 });
                 assert_eq!(body.fields.unwrap(), expected_body);
-                assert_eq!(body.files, Some(vec![])); // This should be none, or change files type from Option<Vec> to Vec
+                assert_eq!(body.files, None);
             }
         }
     }
