@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
-    io::{BufRead, BufReader, Read},
-    net::TcpStream,
+    io::{BufRead, BufReader, Read, Write},
     str::FromStr,
 };
 
@@ -75,7 +74,7 @@ pub struct Request {
 
 impl Request {
     /// Constructs an HTTP Request from a TCP Stream.
-    pub fn from_tcp_stream(stream: &mut TcpStream) -> Request {
+    pub fn from_tcp_stream<T: Read + Write>(stream: &mut T) -> Request {
         let mut reader = BufReader::new(stream);
         let mut request = String::new();
         loop {
