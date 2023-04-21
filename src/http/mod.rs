@@ -58,10 +58,18 @@ pub struct FormdataBody {
 }
 
 #[derive(Debug)]
+/// File struct.
+pub struct File {
+    pub extension: String,
+    pub content: Vec<u8>,
+}
+
+#[derive(Debug)]
 /// HTTP Request body type.
 pub enum BodyType {
     Text(String),
     FormdataBody(FormdataBody),
+    File(File),
 }
 #[derive(Debug)]
 /// HTTP Request struct.
@@ -106,14 +114,16 @@ impl Response {
         let mut res = String::from("HTTP/1.1 ");
         res.push_str(&self.status_code.to_string());
         res.push_str("\r\n");
-        let q = self.headers.unwrap_or_default();
-        for (key, value) in q {
-            res = format!("{}{}: {}\r\n", res, key, value);
+        let headers = self.headers.unwrap_or_default();
+        for (key, value) in headers {
+            res.push_str(&format!("{}: {}\r\n", key, value));
         }
         res.push_str("Server: Blitzkrieg\r\n");
         res.push_str("\r\n");
         let mut res = res.as_bytes().to_owned();
-        res.append(&mut self.body.unwrap());
+        if let Some(mut body) = self.body {
+            res.append(&mut body);
+        }
         res
     }
 }
