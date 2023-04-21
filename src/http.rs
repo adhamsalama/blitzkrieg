@@ -88,12 +88,14 @@ impl Request {
         let linesplit = request.split("\n");
         for l in linesplit {
             if l.starts_with("Content-Length") {
-                let sizeplit = l.split(":");
-                for s in sizeplit {
-                    if !(s.starts_with("Content-Length")) {
-                        size = s.trim().parse::<usize>().unwrap(); //Get Content-Length
-                    }
-                }
+                size = l
+                    .split(":")
+                    .skip(1)
+                    .next()
+                    .unwrap()
+                    .trim()
+                    .parse::<usize>()
+                    .unwrap();
             }
         }
         let mut buffer = vec![0; size]; //New Vector with size of Content
