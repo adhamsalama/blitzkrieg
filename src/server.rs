@@ -40,8 +40,7 @@ impl Server {
             self.threadpool.execute(move || {
                 let request = Request::from_tcp_stream(&mut stream);
                 let response = handler(request);
-                let response_bytes = response.into_bytes();
-                stream.write_all(&response_bytes).unwrap();
+                stream.write_all(&response.into_bytes()).unwrap();
             });
         }
     }
