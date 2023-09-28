@@ -1,5 +1,5 @@
 use crate::{http::Request, http::Response, threadpool::ThreadPool};
-use std::{io::prelude::*, net::TcpListener, sync::Arc};
+use std::{io::prelude::*, net::TcpListener, sync::Arc, time::Duration};
 
 /// HTTP Server struct.
 pub struct Server {
@@ -37,16 +37,51 @@ impl Server {
         for stream in self.listener.incoming() {
             let mut stream = stream.unwrap();
             let handler = Arc::clone(&self.handler);
-            self.threadpool.execute(move || {
+            self.threadpool.execute(move || loop {
                 let request = Request::from_tcp_stream(&mut stream);
+                // stream
+                //     .set_read_timeout(Some(Duration::from_secs(5)))
+                //     .unwrap();
+                // stream
+                //     .set_write_timeout(Some(Duration::from_secs(5)))
+                //     .unwrap();
+                println!("{:?}", std::thread::current().id());
                 match request {
                     Ok(request) => {
                         let response = handler(request);
-                        stream.write_all(&response.into_bytes()).unwrap();
+                        match stream.write_all(&response.into_bytes()) {
+                            Ok(_) => match stream.flush() {
+                                Ok(_) => {}
+                                Err(err) => {
+                                    println!("Error in flushing response. {}", err);
+                                }
+                            },
+                            Err(err) => {
+                                println!("Error in writing response. {}", err);
+                            }
+                        }
                     }
                     Err(error) => {
-                        let error_response = Response::new(400).body(&error);
-                        stream.write_all(&error_response.into_bytes()).unwrap();
+                        println!("Error in request. {error}");
+                        if error == "Resource temporarily unavailable (os error 11)".to_string() {
+                            match stream.shutdown(std::net::Shutdown::Both) {
+                                Ok(_) => break,
+                                Err(err) => {
+                                    println!("Error in shutting down stream. {}", err);
+                                    break;
+                                }
+                            }
+                        }
+                        let error_response = Response::new(500).body(&error);
+                        match stream.write_all(&error_response.into_bytes()) {
+                            Ok(_) => {
+                                break;
+                            }
+                            Err(err) => {
+                                println!("Error in sending generic response. {}", err);
+                                break;
+                            }
+                        }
                     }
                 }
             });

@@ -17,6 +17,9 @@ impl Request {
                 break;
             }
         }
+        if request.len() == 0 {
+            return Err("Reading returned nothing".into());
+        }
         let mut size = 0;
         let linesplit = request.split("\n");
         for l in linesplit {
@@ -40,6 +43,7 @@ impl Request {
     pub fn parse(request: String, body: Vec<u8>) -> Result<Request, String> {
         let request_lines: Vec<&str> = request.split("\r\n").collect();
         let mut first_line_iter = request_lines[0].split_whitespace();
+        println!("Incoming request: {}", request_lines[0]);
         let method = first_line_iter
             .next()
             .ok_or("Error while parsing HTTP method")?;
@@ -54,7 +58,7 @@ impl Request {
                 );
             }
         }
-        let default = "".to_string();
+        let default = String::new();
         let content_type = headers.get("Content-Type").unwrap_or(&default);
         if content_type.contains("multipart/form-data") {
             // This is because the line will have extra chars like " multipart/form-data; boundary=X-INSOMNIA-BOUNDARY"
