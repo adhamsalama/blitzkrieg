@@ -118,12 +118,15 @@ impl Response {
         for (key, value) in headers {
             res.push_str(&format!("{}: {}\r\n", key, value));
         }
+        res.push_str("Connection: keep-alive\r\n");
         res.push_str("Server: Blitzkrieg\r\n");
-        res.push_str("\r\n");
-        let mut res = res.as_bytes().to_owned();
         if let Some(mut body) = self.body {
+            res.push_str(&format!("Content-Length: {}\r\n", body.len()));
+            res.push_str("\r\n");
+            let mut res = res.as_bytes().to_owned();
             res.append(&mut body);
+            return res;
         }
-        res
+        res.as_bytes().to_owned()
     }
 }
