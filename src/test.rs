@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod tests {
-    use std::io::{Read, Write};
+    use std::io::{BufReader, Read, Write};
 
     // Define a mock object that implements MyTcpStream
     struct MockTcpStream {
@@ -75,12 +75,29 @@ pub mod tests {
         let r = "POST / HTTP/1.1\r\nHost: localhost:7878\r\nUser-Agent: insomnia/2022.7.3\r\nContent-Type: text/plain\r\nAuthorization: token\r\nAccept: */*\r\nContent-Length: 15\r\n\r\n";
         let v = [r.into(), body].concat();
         s.set_read_buffer(v.into());
-        let req = Request::from_tcp_stream(&mut s).unwrap();
+        let mut buffer = BufReader::new(&mut s);
+        let req = Request::from_tcp_stream(&mut buffer).unwrap();
         match req.body {
             Some(http::BodyType::Text(body)) => {
                 assert_eq!(body, body_string)
             }
             _ => panic!("Bodytype shouldn't be formdata"),
+        }
+    }
+    #[test]
+    fn tcp_pipelining_works() {
+        let mut s = MockTcpStream::new();
+        let mut all_reqs = String::new();
+        let n = 5;
+        for i in 0..n {
+            let req = format!("POST /{i} HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
+            all_reqs = format!("{}{}", all_reqs, req);
+        }
+        s.set_read_buffer(all_reqs.into());
+        let mut buffer = BufReader::new(&mut s);
+        for i in 0..n {
+            let req = Request::from_tcp_stream(&mut buffer).unwrap();
+            assert_eq!(req.path, format!("/{}", i));
         }
     }
     #[test]
