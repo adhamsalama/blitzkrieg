@@ -1,14 +1,13 @@
 use super::{BodyType, File, FormdataBody, FormdataFile, FormdataText, HTTPMethod, Request};
 use std::{
     collections::HashMap,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Read},
     str::FromStr,
 };
 
 impl Request {
     /// Constructs an HTTP Request from a TCP Stream.
-    pub fn from_tcp_stream<T: Read + Write>(stream: &mut T) -> Result<Request, String> {
-        let mut reader = BufReader::new(stream);
+    pub fn from_tcp_stream<T: Read>(reader: &mut BufReader<&mut T>) -> Result<Request, String> {
         let mut request = String::new();
         loop {
             let r = reader.read_line(&mut request).map_err(|e| e.to_string())?;
@@ -18,7 +17,7 @@ impl Request {
             }
         }
         if request.len() == 0 {
-            return Err("Reading returned nothing".into());
+            return Err("Finished".into());
         }
         let mut size = 0;
         let linesplit = request.split("\n");
@@ -43,7 +42,6 @@ impl Request {
     pub fn parse(request: String, body: Vec<u8>) -> Result<Request, String> {
         let request_lines: Vec<&str> = request.split("\r\n").collect();
         let mut first_line_iter = request_lines[0].split_whitespace();
-        println!("Incoming request: {}", request_lines[0]);
         let method = first_line_iter
             .next()
             .ok_or("Error while parsing HTTP method")?;

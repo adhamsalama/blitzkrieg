@@ -1,5 +1,9 @@
 use crate::{http::Request, http::Response, threadpool::ThreadPool};
-use std::{io::prelude::*, net::TcpListener, sync::Arc, time::Duration};
+use std::{
+    io::{prelude::*, BufReader},
+    net::TcpListener,
+    sync::Arc,
+};
 
 /// HTTP Server struct.
 pub struct Server {
@@ -38,52 +42,56 @@ impl Server {
             let mut stream = stream.unwrap();
             let handler = Arc::clone(&self.handler);
             self.threadpool.execute(move || loop {
-                let request = Request::from_tcp_stream(&mut stream);
-                // stream
-                //     .set_read_timeout(Some(Duration::from_secs(5)))
-                //     .unwrap();
-                // stream
-                //     .set_write_timeout(Some(Duration::from_secs(5)))
-                //     .unwrap();
-                println!("{:?}", std::thread::current().id());
-                match request {
-                    Ok(request) => {
-                        let response = handler(request);
-                        match stream.write_all(&response.into_bytes()) {
-                            Ok(_) => match stream.flush() {
-                                Ok(_) => {}
+                let mut cloned_stream = stream.try_clone().unwrap();
+                let mut reader = BufReader::new(&mut cloned_stream);
+                loop {
+                    let request = Request::from_tcp_stream(&mut reader);
+                    // stream
+                    //     .set_read_timeout(Some(Duration::from_secs(5)))
+                    //     .unwrap();
+                    // stream
+                    //     .set_write_timeout(Some(Duration::from_secs(5)))
+                    //     .unwrap();
+                    match request {
+                        Ok(request) => {
+                            println!("{} {}", request.method, request.path);
+                            let response = handler(request);
+                            match stream.write_all(&response.into_bytes()) {
+                                Ok(_) => match stream.flush() {
+                                    Ok(_) => {}
+                                    Err(err) => {
+                                        println!("Error in flushing response. {}", err);
+                                    }
+                                },
                                 Err(err) => {
-                                    println!("Error in flushing response. {}", err);
+                                    println!("Error in writing response. {}", err);
                                 }
-                            },
-                            Err(err) => {
-                                println!("Error in writing response. {}", err);
                             }
                         }
-                    }
-                    Err(error) => {
-                        println!("Error in request. {error}");
-                        if error == "Resource temporarily unavailable (os error 11)".to_string() {
-                            match stream.shutdown(std::net::Shutdown::Both) {
-                                Ok(_) => break,
+                        Err(error) => {
+                            if error == "Finished".to_string() {
+                                break;
+                            }
+                            println!("Error in request. {error}");
+                            if error == "Resource temporarily unavailable (os error 11)".to_string()
+                                || error == "Connection reset by peer (os error 104)".to_string()
+                            {
+                                break;
+                            }
+                            let error_response = Response::new(500).body(&error);
+                            match stream.write_all(&error_response.into_bytes()) {
+                                Ok(_) => {
+                                    break;
+                                }
                                 Err(err) => {
-                                    println!("Error in shutting down stream. {}", err);
+                                    println!("Error in sending generic response. {}", err);
                                     break;
                                 }
                             }
                         }
-                        let error_response = Response::new(500).body(&error);
-                        match stream.write_all(&error_response.into_bytes()) {
-                            Ok(_) => {
-                                break;
-                            }
-                            Err(err) => {
-                                println!("Error in sending generic response. {}", err);
-                                break;
-                            }
-                        }
                     }
                 }
+                break;
             });
         }
     }
