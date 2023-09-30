@@ -31,6 +31,20 @@ impl FromStr for HTTPMethod {
     }
 }
 
+impl std::fmt::Display for HTTPMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::GET => write!(f, "GET"),
+            Self::POST => write!(f, "POST"),
+            Self::PUT => write!(f, "PUT"),
+            Self::PATCH => write!(f, "PATCH"),
+            Self::DELETE => write!(f, "DELETE"),
+            Self::HEAD => write!(f, "HEAD"),
+            Self::OPTIONS => write!(f, "OPTIONS"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct FormdataText {
     pub name: String,
@@ -80,6 +94,7 @@ pub struct Request {
     pub body: Option<BodyType>,
 }
 
+#[derive(Debug)]
 /// HTTP Response struct.
 pub struct Response {
     pub status_code: u16,
